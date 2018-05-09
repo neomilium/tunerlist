@@ -5,54 +5,45 @@ require 'serialport'
 require 'pp'
 
 def hex(data)
-  if data.class == Array
-    data.map do |b|
-      b = b.ord if b.class == String
-      format('%02x', b)
-    end
-  else
-    puts "Huh?: data is a #{data.class}"
+  data.map do |b|
+    format('%02x', b)
   end
 end
 
 module TunerList
   class FrameCodec
-    FRAME_HEADER = "\x3d"
-    ACKNOWLEDGE  = "\xc5"
+    FRAME_HEADER = 0x3d
+    ACKNOWLEDGE  = 0xc5
 
     def initialize(serialport)
       @serialport = serialport
-      @frame = ''
       @status = :init
-    end
-
-    def self.compute_checksum(bytes)
-      puts "compute_checksum: #{hex(bytes)}"
-      checksum = 0x00
-      bytes.each do |b|
-        checksum ^= b
-      end
-      checksum
+      @frame_id = 0
     end
 
     def ack
-      @serialport.write ACKNOWLEDGE
+      write_raw [ACKNOWLEDGE]
+    end
+
+    def write_raw(bytes)
+      @serialport.write(bytes.pack('C*'))
+    end
+
+    def frame_sequence
+      @frame_id = (@frame_id + 1) % 256
     end
 
     def write_data(data)
-      @frame_id = 0
-      frame = [FRAME_HEADER, @frame_id, data.length]
+      frame = [FRAME_HEADER, frame_sequence, data.length]
       frame += data
-      frame.map!(&:ord)
       frame += [FrameCodec.compute_checksum(frame)]
-      pp frame
-      @serialport.write(frame.pack('C*'))
+      write_raw frame
+      @frame_acked = false
     end
 
     def write_payload(payload_type, payload)
       data = [payload_type]
       data += payload
-      data.map!(&:ord)
       write_data(data)
     end
 
@@ -60,49 +51,98 @@ module TunerList
       output = nil
       # puts "Status: #{@status.to_s}"
       @status = case @status
-                when :init then
-                  byte = @serialport.read(1)
-                  if byte == FRAME_HEADER
-                    @frame = FRAME_HEADER
-                    :header
-                  else
-                    puts "Dropped byte: #{byte[0].ord}" unless byte.nil?
-                    :init
+                when :init
+                  @frame = []
+                  process_first_byte
+                when :header
+                  process_bytes(1, :id)
+                when :id
+                  process_bytes(1, :data) do |bytes|
+                    process_bytes(bytes.first, true, false)
                   end
-                when :header then
-                  frame_id = @serialport.read(1)
-                  @frame += frame_id
-                  frame_id.nil? ? :init : :id
-                when :id then
-                  data_length = @serialport.read(1)
-                  @frame += data_length
-                  data = @serialport.read data_length[0].ord
-                  @frame += data
-                  :data
-                when :data then
-                  checksum = @serialport.read(1)[0].ord
-                  puts '\o/' if FrameCodec.compute_checksum(@frame.bytes) == checksum
+                when :data
+                  process_checksum
+                when :complete
+                  puts '\o/'
                   output = @frame
+                  :init
+                when :invalid_checksum
+                  puts 'Checksum is invalid'
+                  :init
+                when :acknowledge then
+                  @frame_acked = true
                   :init
                 else
                   :init
-        end
+                end
       output
+    end
+
+    private_class_method
+
+    def self.compute_checksum(bytes)
+      checksum = 0x00
+      bytes.each do |b|
+        checksum ^= b
+      end
+      checksum
+    end
+
+    private
+
+    def read_raw(count)
+      string = @serialport.read(count)
+      return nil if string.nil?
+      string.bytes
+    end
+
+    def process_first_byte
+      bytes = read_raw(1)
+      return :init if bytes.nil?
+      case bytes.first
+      when FRAME_HEADER
+        @frame += bytes
+        :header
+      when ACKNOWLEDGE
+        :acknowledge
+      else
+        puts "Dropped byte: #{hex(bytes)}"
+        :init
+      end
+    end
+
+    def process_checksum
+      process_bytes(1, :complete, :invalid_checksum) do |bytes|
+        FrameCodec.compute_checksum(@frame) == bytes.first
+      end
+    end
+
+    def process_bytes(count, success, failure = :init)
+      bytes = read_raw(count)
+      return failure if bytes.nil?
+
+      result = block_given? ? yield(bytes) : true
+
+      if result == true
+        @frame += bytes
+        return success
+      end
+      failure
     end
   end
 
   class HUEmulator
     # CDC
-    BOOTING       = "\x11"
-    STATUS        = "\x20"
-    RANDOM_STATUS = "\x25"
-    PLAYING       = "\x47"
+    BOOTING       = 0x11
+    STATUS        = 0x20
+    RANDOM_STATUS = 0x25
+    PLAYING       = 0x47
 
-    RANDOM_STATUS_ON  = "\x07"
-    RANDOM_STATUS_OFF = "\x03"
+    RANDOM_STATUS_ON  = 0x07
+    RANDOM_STATUS_OFF = 0x03
 
     # HU
-    NEXT_TRACK = "\x17"
+    NEXT_TRACK = 0x17
 
     def initialize(port)
       @serialport = SerialPort.new(port,
@@ -113,6 +153,7 @@ module TunerList
 
       @serialport.read_timeout = 2000
       @frame_codec = TunerList::FrameCodec.new @serialport
+      @cdc = {}
     end
 
     def run
@@ -125,11 +166,11 @@ module TunerList
     private
 
     def extract_data
-      @frame[3..-1]
+      @frame[2..-1]
     end
 
-    def int_to_bcd(i)
-      s = i.to_s
+    def int_to_bcd(int)
+      s = int.to_s
       s.insert(0, '0') if s.length.odd?
       [s].pack('H*').unpack('C*')[0]
     end
@@ -139,35 +180,61 @@ module TunerList
     end
 
     def send_next_track
-      @frame_codec.write_payload(NEXT_TRACK, ["\x01"])
+      puts 'next track'
+      @frame_codec.write_payload(NEXT_TRACK, [0x01])
     end
 
     def process_frame
       @frame_codec.ack
       data = extract_data
-      case data[0]
-      when BOOTING then
-      when STATUS then
-        puts "STATUS: #{data[1].ord} #{data[2].ord} #{data[5].ord}"
+      payload_type = data[0]
+      payload = data[1..-1]
+      case payload_type
+      when BOOTING
+        process_booting
+      when STATUS
+        process_status(payload)
       when RANDOM_STATUS then
-        puts "RANDOM_STATUS: #{data[1] == RANDOM_STATUS_ON}"
+        process_random_status(payload)
       when PLAYING then
-        status = {
-          track_number:      bcd_to_int(data[1].ord),
-          cd_time_hour:      bcd_to_int(data[3].ord),
-          cd_time_minute:    bcd_to_int(data[4].ord),
-          cd_time_second:    bcd_to_int(data[5].ord),
-          cd_time_sector:    bcd_to_int(data[6].ord),
-          track_time_hour:   bcd_to_int(data[7].ord),
-          track_time_minute: bcd_to_int(data[8].ord),
-          track_time_second: bcd_to_int(data[9].ord),
-          track_time_sector: bcd_to_int(data[10].ord),
-        }
-        puts "PLAYING: #{status}"
+        process_playing(payload)
         send_next_track
       else
         puts "Unknown data: #{hex(data)} (length: #{data.length})"
       end
+    end
+
+    def process_booting
+      @cdc[:status] = :booting
+    end
+
+    def process_status(payload)
+      @cdc[:status] = :ready
+      @cdc[:cd_state] = payload[0]
+      @cdc[:tray_state] = payload[1]
+      @cdc[:cd_number] = payload[4]
+      pp @cdc
+    end
+
+    def process_random_status(payload)
+      @cdc[:random] = payload[0] == RANDOM_STATUS_ON
+      pp @cdc
+    end
+
+    def process_playing(payload)
+      @cdc[:track_number] = bcd_to_int(payload.shift)
+      @cdc[:cd_time] = payload_to_time(payload)
+      @cdc[:track_time] = payload_to_time(payload)
+      pp @cdc
+    end
+
+    def payload_to_time(payload)
+      {
+        hour:   bcd_to_int(payload.shift),
+        minute: bcd_to_int(payload.shift),
+        second: bcd_to_int(payload.shift),
+        sector: bcd_to_int(payload.shift),
+      }
     end
   end
 end
