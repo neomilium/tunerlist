@@ -5,5 +5,5 @@ $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/lib")
 
 require 'tunerlist'
 
-hu_emulator = TunerList::HUEmulator.new 'ttyCDC'
-hu_emulator.run
+hu = TunerList::HeadUnitEmulator.new 'ttyCDC'
+hu.run

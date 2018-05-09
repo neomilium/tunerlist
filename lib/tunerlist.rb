@@ -131,7 +131,7 @@ module TunerList
     end
   end
 
-  class HUEmulator
+  class HeadUnitEmulator
     # CDC
     BOOTING       = 0x11
     STATUS        = 0x20
