@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'serialport'
 require 'pp'
@@ -16,8 +17,8 @@ end
 
 module TunerList
   class FrameCodec
-    FRAME_HEADER = "\x3d".freeze
-    ACKNOWLEDGE  = "\xc5".freeze
+    FRAME_HEADER = "\x3d"
+    ACKNOWLEDGE  = "\xc5"
 
     def initialize(serialport)
       @serialport = serialport
@@ -92,16 +93,16 @@ module TunerList
 
   class HUEmulator
     # CDC
-    BOOTING       = "\x11".freeze
-    STATUS        = "\x20".freeze
-    RANDOM_STATUS = "\x25".freeze
-    PLAYING       = "\x47".freeze
+    BOOTING       = "\x11"
+    STATUS        = "\x20"
+    RANDOM_STATUS = "\x25"
+    PLAYING       = "\x47"
 
-    RANDOM_STATUS_ON  = "\x07".freeze
-    RANDOM_STATUS_OFF = "\x03".freeze
+    RANDOM_STATUS_ON  = "\x07"
+    RANDOM_STATUS_OFF = "\x03"
 
     # HU
-    NEXT_TRACK = "\x17".freeze
+    NEXT_TRACK = "\x17"
 
     def initialize(port)
       @serialport = SerialPort.new(port,
@@ -160,7 +161,7 @@ module TunerList
           track_time_hour:   bcd_to_int(data[7].ord),
           track_time_minute: bcd_to_int(data[8].ord),
           track_time_second: bcd_to_int(data[9].ord),
-          track_time_sector: bcd_to_int(data[10].ord)
+          track_time_sector: bcd_to_int(data[10].ord),
         }
         puts "PLAYING: #{status}"
         send_next_track
