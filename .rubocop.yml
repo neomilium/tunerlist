@@ -1,0 +1,16 @@
+AllCops:
+  TargetRubyVersion: 2.3
+  Exclude:
+    - 'vendor/**/*'
+
+Metrics/LineLength:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
