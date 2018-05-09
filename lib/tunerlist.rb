@@ -7,7 +7,7 @@ def hex(data)
   if data.class == Array
     data.map do |b|
       b = b.ord if b.class == String
-      "%02x" % b
+      format('%02x', b)
     end
   else
     puts "Huh?: data is a #{data.class}"
@@ -16,9 +16,9 @@ end
 
 module TunerList
   class FrameCodec
-    FRAME_HEADER = "\x3d"
-    ACKNOWLEDGE  = "\xc5"
-    
+    FRAME_HEADER = "\x3d".freeze
+    ACKNOWLEDGE  = "\xc5".freeze
+
     def initialize(serialport)
       @serialport = serialport
       @frame = ''
@@ -40,18 +40,18 @@ module TunerList
 
     def write_data(data)
       @frame_id = 0
-      frame = [ FRAME_HEADER, @frame_id, data.length ]
+      frame = [FRAME_HEADER, @frame_id, data.length]
       frame += data
-      frame.map!{|b| b.ord}
-      frame += [ FrameCodec::compute_checksum(frame) ]
+      frame.map!(&:ord)
+      frame += [FrameCodec.compute_checksum(frame)]
       pp frame
       @serialport.write(frame.pack('C*'))
     end
 
     def write_payload(payload_type, payload)
-      data = [ payload_type ]
+      data = [payload_type]
       data += payload
-      data.map!{|b| b.ord}
+      data.map!(&:ord)
       write_data(data)
     end
 
@@ -59,34 +59,32 @@ module TunerList
       output = nil
       # puts "Status: #{@status.to_s}"
       @status = case @status
-        when :init then
-          byte = @serialport.read(1)
-          if byte == FRAME_HEADER then
-            @frame = FRAME_HEADER
-            :header
-          else
-            puts "Dropped byte: #{byte[0].ord}" unless byte.nil?
-            :init
-          end
-        when :header then
-          frame_id = @serialport.read(1)
-          @frame += frame_id
-          frame_id.nil? ? :init : :id
-        when :id then
-          data_length = @serialport.read(1)
-          @frame += data_length
-          data = @serialport.read data_length[0].ord
-          @frame += data
-          :data
-        when :data then
-          checksum = @serialport.read(1)[0].ord
-          if FrameCodec::compute_checksum(@frame.bytes) == checksum
-            puts '\o/'
-          end
-          output = @frame
-          :init
-        else
-          :init
+                when :init then
+                  byte = @serialport.read(1)
+                  if byte == FRAME_HEADER
+                    @frame = FRAME_HEADER
+                    :header
+                  else
+                    puts "Dropped byte: #{byte[0].ord}" unless byte.nil?
+                    :init
+                  end
+                when :header then
+                  frame_id = @serialport.read(1)
+                  @frame += frame_id
+                  frame_id.nil? ? :init : :id
+                when :id then
+                  data_length = @serialport.read(1)
+                  @frame += data_length
+                  data = @serialport.read data_length[0].ord
+                  @frame += data
+                  :data
+                when :data then
+                  checksum = @serialport.read(1)[0].ord
+                  puts '\o/' if FrameCodec.compute_checksum(@frame.bytes) == checksum
+                  output = @frame
+                  :init
+                else
+                  :init
         end
       output
     end
@@ -94,25 +92,24 @@ module TunerList
 
   class HUEmulator
     # CDC
-    BOOTING       = "\x11"
-    STATUS        = "\x20"
-    RANDOM_STATUS = "\x25"
-    PLAYING       = "\x47"
+    BOOTING       = "\x11".freeze
+    STATUS        = "\x20".freeze
+    RANDOM_STATUS = "\x25".freeze
+    PLAYING       = "\x47".freeze
 
-    RANDOM_STATUS_ON  = "\x07"
-    RANDOM_STATUS_OFF = "\x03"
+    RANDOM_STATUS_ON  = "\x07".freeze
+    RANDOM_STATUS_OFF = "\x03".freeze
 
     # HU
-    NEXT_TRACK = "\x17"
+    NEXT_TRACK = "\x17".freeze
 
     def initialize(port)
-      @serialport = SerialPort.new(port, {
-        baud: 9600,
-        data_bits: 8,
-        stop_bits: 1,
-        parity: SerialPort::EVEN
-      })
-      
+      @serialport = SerialPort.new(port,
+                                   baud: 9600,
+                                   data_bits: 8,
+                                   stop_bits: 1,
+                                   parity: SerialPort::EVEN)
+
       @serialport.read_timeout = 2000
       @frame_codec = TunerList::FrameCodec.new @serialport
     end
@@ -125,22 +122,23 @@ module TunerList
     end
 
     private
+
     def extract_data
       @frame[3..-1]
     end
 
     def int_to_bcd(i)
-       s = i.to_s
-       s.insert(0, '0') if s.length.odd?
-       [s].pack('H*').unpack('C*')[0]
+      s = i.to_s
+      s.insert(0, '0') if s.length.odd?
+      [s].pack('H*').unpack('C*')[0]
     end
 
     def bcd_to_int(bcd)
-      ("%02x" % bcd).to_i 10
+      format('%02x', bcd).to_i 10
     end
 
     def send_next_track
-      @frame_codec.write_payload(NEXT_TRACK, [ "\x01" ])
+      @frame_codec.write_payload(NEXT_TRACK, ["\x01"])
     end
 
     def process_frame
@@ -162,7 +160,7 @@ module TunerList
           track_time_hour:   bcd_to_int(data[7].ord),
           track_time_minute: bcd_to_int(data[8].ord),
           track_time_second: bcd_to_int(data[9].ord),
-          track_time_sector: bcd_to_int(data[10].ord),
+          track_time_sector: bcd_to_int(data[10].ord)
         }
         puts "PLAYING: #{status}"
         send_next_track
@@ -172,4 +170,3 @@ module TunerList
     end
   end
 end
-
