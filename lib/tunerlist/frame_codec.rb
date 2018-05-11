@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require 'serialport'
-require 'pp'
 
 def hex(data)
   data.map do |b|
@@ -19,10 +18,17 @@ module TunerList
       @serialport = serialport
       @status = :init
       @frame_id = 0
+      @frame_acknowledged = false
     end
 
     def ack
       write_raw [ACKNOWLEDGE]
+    end
+
+    def acknowledged?
+      acknowledged = @frame_acknowledged
+      @frame_acknowledged = false
+      acknowledged
     end
 
     def write_raw(bytes)
@@ -38,7 +44,7 @@ module TunerList
       frame += data
       frame += [FrameCodec.compute_checksum(frame)]
       write_raw frame
-      @frame_acked = false
+      @frame_acknowledged = false
     end
 
     def write_payload(payload_type, payload)
@@ -70,7 +76,7 @@ module TunerList
                   puts 'Checksum is invalid'
                   :init
                 when :acknowledge then
-                  @frame_acked = true
+                  @frame_acknowledged = true
                   :init
                 else
                   :init
