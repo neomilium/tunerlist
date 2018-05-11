@@ -7,14 +7,6 @@ require 'tunerlist'
 
 module TunerList
   class HeadUnitEmulator
-    # CDC
-    BOOTING       = 0x11
-    STATUS        = 0x20
-    RANDOM_STATUS = 0x25
-    PLAYING       = 0x47
-
-    RANDOM_STATUS_ON  = 0x07
-    RANDOM_STATUS_OFF = 0x03
 
     # HU
     NEXT_TRACK = 0x17
@@ -65,13 +57,13 @@ module TunerList
       payload_type = data[0]
       payload = data[1..-1]
       case payload_type
-      when BOOTING
+      when CDC::BOOTING
         process_booting
-      when STATUS
+      when CDC::STATUS
         process_status(payload)
-      when RANDOM_STATUS then
+      when CDC::RANDOM_STATUS then
         process_random_status(payload)
-      when PLAYING then
+      when CDC::PLAYING then
         process_playing(payload)
         send_next_track
       else
@@ -92,7 +84,7 @@ module TunerList
     end
 
     def process_random_status(payload)
-      @cdc[:random] = payload[0] == RANDOM_STATUS_ON
+      @cdc[:random] = payload[0] == RandomStatus::ON
       pp @cdc
     end
 
