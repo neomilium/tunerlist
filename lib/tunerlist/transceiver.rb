@@ -24,8 +24,15 @@ module TunerList
   end
 
   class Transceiver
-    def initialize(serialport)
-      @serialport = serialport
+    def initialize(port)
+      @serialport = SerialPort.new(port,
+                                   baud: 9600,
+                                   data_bits: 8,
+                                   stop_bits: 1,
+                                   parity: SerialPort::EVEN)
+
+      @serialport.read_timeout = 2000
+
       @status = :init
       @frame_id = 0
       @frame_acknowledged = false

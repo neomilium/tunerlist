@@ -2,19 +2,11 @@
 # frozen_string_literal: true
 
 require 'tunerlist'
-require 'serialport'
 
 module TunerList
   class HeadUnitEmulator
     def initialize(port)
-      @serialport = SerialPort.new(port,
-                                   baud: 9600,
-                                   data_bits: 8,
-                                   stop_bits: 1,
-                                   parity: SerialPort::EVEN)
-
-      @serialport.read_timeout = 2000
-      @transceiver = TunerList::Tranceiver.new @serialport
+      @transceiver = TunerList::Tranceiver.new port
       @cdc = {}
     end
 

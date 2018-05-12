@@ -2,20 +2,12 @@
 # frozen_string_literal: true
 
 require 'tunerlist'
-require 'serialport'
 require 'timeout'
 
 module TunerList
   class CompactDiscChangerEmulator
     def initialize(port)
-      @serialport = SerialPort.new(port,
-                                   baud: 9600,
-                                   data_bits: 8,
-                                   stop_bits: 1,
-                                   parity: SerialPort::EVEN)
-
-      @serialport.read_timeout = 2000
-      @transceiver = TunerList::Transceiver.new @serialport
+      @transceiver = TunerList::Transceiver.new port
 
       @status = :init
       @frame_queue = Queue.new
