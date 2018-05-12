@@ -15,7 +15,7 @@ module TunerList
                                    parity: SerialPort::EVEN)
 
       @serialport.read_timeout = 2000
-      @frame_codec = TunerList::FrameCodec.new @serialport
+      @transceiver = TunerList::Transceiver.new @serialport
 
       @status = :init
       @frame_queue = Queue.new
@@ -25,11 +25,11 @@ module TunerList
     def run
       Thread.abort_on_exception = true
       Thread.report_on_exception = true
-      runner = Thread.new do
+      Thread.new do
         loop do
-          frame = @frame_codec.read
+          frame = @transceiver.read
           if frame.nil?
-            @ack_queue << true if @frame_codec.acknowledged?
+            @ack_queue << true if @transceiver.acknowledged?
           else
             @frame_queue << frame
           end
@@ -43,9 +43,9 @@ module TunerList
                   when :running
                     status = :running
                     begin
-                    Timeout.timeout(3) do
-                      process_frame @frame_queue.pop
-                    end
+                      Timeout.timeout(3) do
+                        process_frame @frame_queue.pop
+                      end
                     rescue Timeout::Error
                       status = keep_alive ? :running : :init
                     end
@@ -85,7 +85,7 @@ module TunerList
 
     def send_and_wait_ack(data)
       @ack_queue.clear
-      @frame_codec.write_data(data)
+      @transceiver.write_data(data)
       Timeout.timeout(3) do
         @ack_queue.pop
       end

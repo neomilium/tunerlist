@@ -14,13 +14,13 @@ module TunerList
                                    parity: SerialPort::EVEN)
 
       @serialport.read_timeout = 2000
-      @frame_codec = TunerList::FrameCodec.new @serialport
+      @transceiver = TunerList::Tranceiver.new @serialport
       @cdc = {}
     end
 
     def run
       loop do
-        @frame = @frame_codec.read
+        @frame = @transceiver.read
         process_frame unless @frame.nil?
       end
     end
@@ -43,11 +43,11 @@ module TunerList
 
     def send_next_track
       puts 'next track'
-      @frame_codec.write_data([HU::NEXT_TRACK, 0x01])
+      @transceiver.write_data([HU::NEXT_TRACK, 0x01])
     end
 
     def process_frame
-      @frame_codec.ack
+      @transceiver.ack
       data = extract_data
       payload_type = data[0]
       payload = data[1..-1]

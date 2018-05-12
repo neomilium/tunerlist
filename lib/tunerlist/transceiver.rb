@@ -10,10 +10,20 @@ def hex(data)
 end
 
 module TunerList
-  class FrameCodec
-    FRAME_HEADER = 0x3d
-    ACKNOWLEDGE  = 0xc5
+  module Frame
+    HEADER = 0x3d
+    ACKNOWLEDGE = 0xc5
 
+    def compute_checksum(bytes)
+      checksum = 0x00
+      bytes.each do |b|
+        checksum ^= b
+      end
+      checksum
+    end
+  end
+
+  class Transceiver
     def initialize(serialport)
       @serialport = serialport
       @status = :init
@@ -22,7 +32,7 @@ module TunerList
     end
 
     def ack
-      write_raw [ACKNOWLEDGE]
+      write_raw [Frame::ACKNOWLEDGE]
     end
 
     def acknowledged?
@@ -40,9 +50,9 @@ module TunerList
     end
 
     def write_data(data)
-      frame = [FRAME_HEADER, frame_sequence, data.length]
+      frame = [Frame::HEADER, frame_sequence, data.length]
       frame += data
-      frame += [FrameCodec.compute_checksum(frame)]
+      frame += [Frame.compute_checksum(frame)]
       write_raw frame
       @frame_acknowledged = false
     end
@@ -84,16 +94,6 @@ module TunerList
       output
     end
 
-    private_class_method
-
-    def self.compute_checksum(bytes)
-      checksum = 0x00
-      bytes.each do |b|
-        checksum ^= b
-      end
-      checksum
-    end
-
     private
 
     def read_raw(count)
@@ -106,10 +106,10 @@ module TunerList
       bytes = read_raw(1)
       return :init if bytes.nil?
       case bytes.first
-      when FRAME_HEADER
+      when Frame::HEADER
         @frame += bytes
         :header
-      when ACKNOWLEDGE
+      when Frame::ACKNOWLEDGE
         :acknowledge
       else
         puts "Dropped byte: #{hex(bytes)}"
@@ -119,7 +119,7 @@ module TunerList
 
     def process_checksum
       process_bytes(1, :complete, :invalid_checksum) do |bytes|
-        FrameCodec.compute_checksum(@frame) == bytes.first
+        Frame.compute_checksum(@frame) == bytes.first
       end
     end
 

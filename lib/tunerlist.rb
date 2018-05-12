@@ -1,4 +1,6 @@
-require 'tunerlist/frame_codec'
+# frozen_string_literal: true
+
+require 'tunerlist/transceiver'
 
 module TunerList
   module CDC
