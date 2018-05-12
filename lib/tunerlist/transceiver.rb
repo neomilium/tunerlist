@@ -14,7 +14,7 @@ module TunerList
     HEADER = 0x3d
     ACKNOWLEDGE = 0xc5
 
-    def compute_checksum(bytes)
+    def self.compute_checksum(bytes)
       checksum = 0x00
       bytes.each do |b|
         checksum ^= b
@@ -31,51 +31,60 @@ module TunerList
                                    stop_bits: 1,
                                    parity: SerialPort::EVEN)
 
-      @serialport.read_timeout = 2000
+      @serialport.read_timeout = 1000
 
       @status = :init
-      @frame_id = 0
-      @frame_acknowledged = false
+
+      @rx_queue = Queue.new
+      @ack_queue = Queue.new
+
+      @tx_frame_id = 0
+      @tx_queue = Queue.new
+
+      Thread.abort_on_exception = true
+      Thread.report_on_exception = true
+      Thread.new do
+        loop { process }
+      end
     end
 
-    def ack
-      write_raw [Frame::ACKNOWLEDGE]
+    def receive
+      @rx_queue.pop
     end
 
-    def acknowledged?
-      acknowledged = @frame_acknowledged
-      @frame_acknowledged = false
-      acknowledged
+    def send(data)
+      @ack_queue.clear
+      @tx_queue.push data
+      puts 'data pushed to queue, waiting ACK…'
+      @ack_queue.pop
     end
 
-    def write_raw(bytes)
+    private
+
+    def write(bytes)
       @serialport.write(bytes.pack('C*'))
     end
 
-    def frame_sequence
-      @frame_id = (@frame_id + 1) % 256
+    def read(count)
+      string = @serialport.read(count)
+      return nil if string.nil?
+      string.bytes
     end
 
-    def write_data(data)
-      frame = [Frame::HEADER, frame_sequence, data.length]
-      frame += data
-      frame += [Frame.compute_checksum(frame)]
-      write_raw frame
-      @frame_acknowledged = false
+    def ack
+      write [Frame::ACKNOWLEDGE]
     end
 
-    def write_payload(payload_type, payload)
-      data = [payload_type]
-      data += payload
-      write_data(data)
-    end
-
-    def read
-      output = nil
-      # puts "Status: #{@status.to_s}"
+    def process
+      # puts "Transceiver status: #{@status}"
       @status = case @status
                 when :init
                   @frame = []
+                  :ready
+                when :idle
+                  write_data(@tx_queue.pop) unless @tx_queue.empty?
+                  :ready
+                when :ready
                   process_first_byte
                 when :header
                   process_bytes(1, :id)
@@ -86,32 +95,23 @@ module TunerList
                 when :data
                   process_checksum
                 when :complete
-                  puts '\o/'
-                  output = @frame
+                  ack
+                  @rx_queue << @frame[2..-2]
                   :init
                 when :invalid_checksum
                   puts 'Checksum is invalid'
                   :init
                 when :acknowledge then
-                  @frame_acknowledged = true
+                  @ack_queue << true
                   :init
                 else
-                  :init
+                  raise 'You should not be here!'
                 end
-      output
-    end
-
-    private
-
-    def read_raw(count)
-      string = @serialport.read(count)
-      return nil if string.nil?
-      string.bytes
     end
 
     def process_first_byte
-      bytes = read_raw(1)
-      return :init if bytes.nil?
+      bytes = read(1)
+      return :idle if bytes.nil?
       case bytes.first
       when Frame::HEADER
         @frame += bytes
@@ -131,7 +131,7 @@ module TunerList
     end
 
     def process_bytes(count, success, failure = :init)
-      bytes = read_raw(count)
+      bytes = read(count)
       return failure if bytes.nil?
 
       result = block_given? ? yield(bytes) : true
@@ -141,6 +141,17 @@ module TunerList
         return success
       end
       failure
+    end
+
+    def frame_sequence
+      @tx_frame_id = (@tx_frame_id + 1) % 256
+    end
+
+    def write_data(data)
+      frame = [Frame::HEADER, frame_sequence, data.length]
+      frame += data
+      frame += [Frame.compute_checksum(frame)]
+      write frame
     end
   end
 end

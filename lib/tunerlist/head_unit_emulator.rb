@@ -6,22 +6,17 @@ require 'tunerlist'
 module TunerList
   class HeadUnitEmulator
     def initialize(port)
-      @transceiver = TunerList::Tranceiver.new port
+      @transceiver = TunerList::Transceiver.new port
       @cdc = {}
     end
 
     def run
       loop do
-        @frame = @transceiver.read
-        process_frame unless @frame.nil?
+        process_data @transceiver.receive
       end
     end
 
     private
-
-    def extract_data
-      @frame[2..-1]
-    end
 
     def int_to_bcd(int)
       s = int.to_s
@@ -35,26 +30,24 @@ module TunerList
 
     def send_next_track
       puts 'next track'
-      @transceiver.write_data([HU::NEXT_TRACK, 0x01])
+      @transceiver.send([HU::NEXT_TRACK, 0x01])
     end
 
-    def process_frame
-      @transceiver.ack
-      data = extract_data
-      payload_type = data[0]
-      payload = data[1..-1]
+    def process_data(data)
+      payload_type = data.shift
+      payload = data
       case payload_type
       when CDC::BOOTING
         process_booting
       when CDC::STATUS
         process_status(payload)
-      when CDC::RANDOM_STATUS then
+      when CDC::RANDOM_STATUS
         process_random_status(payload)
-      when CDC::PLAYING then
+      when CDC::PLAYING
         process_playing(payload)
         send_next_track
       else
-        puts "Unknown data: #{hex(data)} (length: #{data.length})"
+        puts "Unknown payload_type: #{hex([payload_type])} with payload: #{payload} (length: #{payload.length})"
       end
     end
 

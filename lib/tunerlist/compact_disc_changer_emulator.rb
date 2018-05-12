@@ -10,23 +10,9 @@ module TunerList
       @transceiver = TunerList::Transceiver.new port
 
       @status = :init
-      @frame_queue = Queue.new
-      @ack_queue = Queue.new
     end
 
     def run
-      Thread.abort_on_exception = true
-      Thread.report_on_exception = true
-      Thread.new do
-        loop do
-          frame = @transceiver.read
-          if frame.nil?
-            @ack_queue << true if @transceiver.acknowledged?
-          else
-            @frame_queue << frame
-          end
-        end
-      end
       loop do
         puts @status
         @status = case @status
@@ -35,9 +21,7 @@ module TunerList
                   when :running
                     status = :running
                     begin
-                      Timeout.timeout(3) do
-                        process_frame @frame_queue.pop
-                      end
+                      Timeout.timeout(3) { process_frame @transceiver.receive }
                     rescue Timeout::Error
                       status = keep_alive ? :running : :init
                     end
@@ -76,10 +60,8 @@ module TunerList
     end
 
     def send_and_wait_ack(data)
-      @ack_queue.clear
-      @transceiver.write_data(data)
       Timeout.timeout(3) do
-        @ack_queue.pop
+        @transceiver.send(data)
       end
     end
 
