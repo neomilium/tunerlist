@@ -13,6 +13,22 @@ module TunerList
     PLAYING       = 0x47
   end
 
+  module HU
+    START_PLAY = 0x13
+    NEXT_TRACK = 0x17
+    STOP_PLAY = 0x19
+    PAUSE = 0x1C
+    FAST_FWD = 0x20
+    FAST_REW = 0x21
+    PREV_TRACK = 0x22
+    NEXT_CD = 0x24
+    LOAD_CD = 0x26
+    RANDOM = 0x27
+    REQ_CD_INFO = 0x86
+    HU_ON = 0x93
+    CD_CHECK = 0x94
+  end
+
   module CD
     NO_CD_LOADED = 0x01
     PAUSED = 0x03

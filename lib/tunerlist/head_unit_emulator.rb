@@ -1,16 +1,11 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'serialport'
-
 require 'tunerlist'
+require 'serialport'
 
 module TunerList
   class HeadUnitEmulator
-
-    # HU
-    NEXT_TRACK = 0x17
-
     def initialize(port)
       @serialport = SerialPort.new(port,
                                    baud: 9600,
@@ -48,7 +43,7 @@ module TunerList
 
     def send_next_track
       puts 'next track'
-      @frame_codec.write_payload(NEXT_TRACK, [0x01])
+      @frame_codec.write_data([HU::NEXT_TRACK, 0x01])
     end
 
     def process_frame
