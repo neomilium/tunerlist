@@ -31,7 +31,8 @@ module TunerList
                                    stop_bits: 1,
                                    parity: SerialPort::EVEN)
 
-      @serialport.read_timeout = 1000
+      @serialport.read_timeout = 200
+      @serialport.flush_input
 
       @status = :init
 
