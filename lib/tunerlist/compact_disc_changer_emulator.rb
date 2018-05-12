@@ -41,14 +41,15 @@ module TunerList
                   when :init
                     send_boot_sequence ? :running : :init
                   when :running
+                    status = :running
                     begin
                     Timeout.timeout(3) do
                       process_frame @frame_queue.pop
                     end
                     rescue Timeout::Error
-                      keep_alive ? :running : :init
+                      status = keep_alive ? :running : :init
                     end
-                    :running
+                    status
                   else
                     raise 'Invalid status'
                   end
@@ -83,6 +84,7 @@ module TunerList
     end
 
     def send_and_wait_ack(data)
+      @ack_queue.clear
       @frame_codec.write_data(data)
       Timeout.timeout(3) do
         @ack_queue.pop
