@@ -47,7 +47,11 @@ module TunerList
         process_playing(payload)
         send_next_track
       else
-        puts "Unknown payload_type: #{hex([payload_type])} with payload: #{payload} (length: #{payload.length})"
+        if const_id = CDC.constants.find_index { |c| CDC.const_get(c) == payload_type }
+          puts "Not yet implemented payload_type: #{CDC.constants[const_id]} with payload: #{hex(payload)} (length: #{payload.length})"
+        else
+          puts "Unknown payload_type: #{hex([payload_type])} with payload: #{hex(payload)} (length: #{payload.length})"
+        end
       end
     end
 
