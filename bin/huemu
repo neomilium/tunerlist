@@ -6,5 +6,6 @@ STDOUT.sync = true
 
 require 'tunerlist/head_unit_emulator'
 
-hu = TunerList::HeadUnitEmulator.new 'ttyCDC'
+port = ARGV.shift || 'ttyCDC'
+hu = TunerList::HeadUnitEmulator.new port
 hu.run
