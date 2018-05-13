@@ -21,7 +21,7 @@ module TunerList
                   when :running
                     status = :running
                     begin
-                      Timeout.timeout(3) { process_frame @transceiver.receive }
+                      Timeout.timeout(2) { process_data @transceiver.receive }
                     rescue Timeout::Error
                       status = keep_alive ? :running : :init
                     end
@@ -60,7 +60,7 @@ module TunerList
     end
 
     def send_and_wait_ack(data)
-      Timeout.timeout(3) do
+      Timeout.timeout(2) do
         @transceiver.send(data)
       end
     end
