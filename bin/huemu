@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
+STDOUT.sync = true
 
 require 'tunerlist/head_unit_emulator'
 
