@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'tunerlist'
+require 'timeout'
 
 module TunerList
   class HeadUnitEmulator
@@ -11,6 +12,14 @@ module TunerList
     end
 
     def run
+      Timeout.timeout(3) do
+        @transceiver.send([HU::HU_ON])
+        @transceiver.send([HU::STOP_PLAY])
+        @transceiver.send([HU::REQ_CD_INFO])
+        @transceiver.send([HU::RANDOM, 0x02, 0x0a])
+        @transceiver.send([HU::START_PLAY])
+      end
+
       loop do
         process_data @transceiver.receive
       end
@@ -32,6 +41,8 @@ module TunerList
       puts 'next track'
       @transceiver.send([HU::NEXT_TRACK, 0x01])
     end
+
+    private
 
     def process_data(data)
       payload_type = data.shift
