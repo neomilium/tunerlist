@@ -53,4 +53,16 @@ module TunerList
     OFF = 0x03
     ON  = 0x07
   end
+
+  module Helper
+    def self.const_prettify(modul, value)
+      (const_name = find_const_name(modul, value)) ? const_name : value
+    end
+
+    def self.find_const_name(modul, value)
+      if (const_id = modul.constants.find_index { |c| modul.const_get(c) == value })
+        modul.constants[const_id].to_s
+      end
+    end
+  end
 end
