@@ -56,13 +56,14 @@ module TunerList
 
     def process_status(payload)
       @cdc[:status] = :ready
-      @cdc[:cd_state] = payload[0]
-      @cdc[:tray_state] = payload[1]
+      @cdc[:cd_state] = Helper.const_prettify(CD, payload[0])
+      @cdc[:tray_state] = Helper.const_prettify(Tray, payload[1])
       @cdc[:cd_number] = payload[4]
       pp @cdc
     end
 
     def process_random_status(payload)
+      puts "random_status = #{Helper.const_prettify(RandomStatus, payload[0])}"
       @cdc[:random] = payload[0] == RandomStatus::ON
       pp @cdc
     end
