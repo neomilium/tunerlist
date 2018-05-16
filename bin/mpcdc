@@ -1,0 +1,101 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift("#{File.dirname(__FILE__)}/../lib")
+
+STDOUT.sync = true
+
+require 'tunerlist/compact_disc_changer_emulator'
+require 'ruby-mpd'
+
+class MPCDC < TunerList::CompactDiscChangerEmulator
+  def initialize(port)
+    super(port)
+
+    @mpd = MPD.new 'localhost', 6600, callbacks: true
+    @mpd.connect
+
+    setup_mpd_callbacks
+  end
+
+  def process_random(payload)
+    random = payload[0] == TunerList::RandomStatus::ON
+    @mpd.random = random
+    @random_status = payload[0]
+  end
+
+  def process_next_track(_payload)
+    @mpd.next unless @mpd_state == :stop
+  end
+
+  def process_prev_track(_payload)
+    @mpd.previous unless @mpd_state == :stop
+  end
+
+  def process_start_play(_payload)
+    @mpd.play
+    @cd_state = TunerList::CD::PLAYING
+    send_cd_operation
+  end
+
+  def process_pause(_payload)
+    @mpd.pause = true
+  end
+
+  def process_stop_play(_payload)
+    @mpd.stop
+  end
+
+  def process_fast_fwd(_payload)
+    @mpd.seek('+20')
+    @cd_state = TunerList::CD::CUEING_FWD
+    send_cd_operation
+  end
+
+  def process_fast_rew(_payload)
+    @mpd.seek('-20')
+    @cd_state = TunerList::CD::REWINDING
+    send_cd_operation
+  end
+
+  def setup_mpd_callbacks
+    @mpd.on :state do |status|
+      puts status
+
+      @mpd_state = status
+      map = {
+        play: TunerList::CD::PLAYING,
+        stop: TunerList::CD::LOADING_TRACK, # FIXME
+        pause: TunerList::CD::PAUSED,
+      }
+      cd_status = map[status]
+      puts cd_status
+      @cd_state = cd_status unless cd_status.nil?
+    end
+
+    @mpd.on :song do |song|
+      @track_number = song.pos + 1
+    end
+  end
+end
+
+port = ARGV.shift || 'ttyHU'
+cdc = MPCDC.new port
+cdc.run
+
+def pp_seconds(sec)
+  [60, 60].reduce([sec]) { |m, o| m.unshift(m.shift.divmod(o)).flatten } unless s.nil?
+end
+
+@mpd.on :random do |status|
+  puts status
+end
+
+@mpd.on :time do |elapsed, total|
+  puts "#{elapsed} / #{total}"
+  puts "#{pp_seconds(elapsed)} / #{pp_seconds(total)}"
+end
+
+@mpd.on :stored_playlist do |p|
+  puts p
+end

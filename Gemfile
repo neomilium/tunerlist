@@ -3,6 +3,7 @@
 source 'https://rubygems.org'
 
 gem 'rake'
+gem 'ruby-mpd'
 
 group :development, :test do
   gem 'rubocop'
