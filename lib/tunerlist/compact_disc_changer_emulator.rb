@@ -28,6 +28,16 @@ module TunerList
 
     end
 
+    def track_number=(value)
+      @track_number = value
+      send cd_operation_to_frame
+      send track_change_to_frame
+    end
+
+    def cd_state=(value)
+      @cd_state = value
+      send cd_operation_to_frame
+    end
 
     private
 
@@ -52,12 +62,12 @@ module TunerList
       ]
     end
 
-    def send_booting
-      send_and_wait_ack([CDC::BOOTING, 0x60, 0x06])
-    end
-
     def send_status
       send_and_wait_ack status_to_frame
+    end
+
+    def playing_to_frame
+      [CDC::PLAYING, TunerList.int_to_bcd(track_number), 0x01] + cd_time + track_time
     end
 
     def status_to_frame
@@ -84,16 +94,8 @@ module TunerList
       [CDC::CD_SUMMARY, tracks_count, 0x01, 0x00, time_hour, time_minute, time_seconds]
     end
 
-    def cd_number
-      0x01
-    end
-
-    def cd_state
-      CD::PLAYING
-    end
-
-    def random_status
-      RandomStatus::OFF
+    def track_change_to_frame
+      [CDC::TRACK_CHANGE, 0x10, TunerList.int_to_bcd(track_number), 0x22]
     end
 
     def cd_bitmap
