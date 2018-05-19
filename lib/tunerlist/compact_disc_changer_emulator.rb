@@ -6,8 +6,22 @@ require 'timeout'
 
 module TunerList
   class CompactDiscChangerEmulator < Emulator
+    attr_reader :cd_number
+    attr_reader :cd_state
+    attr_reader :cd_time
+    attr_reader :track_number
+    attr_reader :track_time
+    attr_reader :random_status
+
     def initialize(port)
       super(port)
+
+      @cd_number = 0x01
+      @cd_state = CD::PLAYING
+      @random_status = RandomStatus::OFF
+      @track_number = 0x23
+      @track_time = [0x00, 0x12, 0x34, 0x02]
+      @cd_time = [0x01, 0x12, 0x34, 0x02]
 
       @receive_commands_from = HU
       @send_commands_from = CDC
