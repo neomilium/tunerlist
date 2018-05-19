@@ -54,15 +54,6 @@ module TunerList
 
     private
 
-    def keep_alive
-      begin
-        send_status
-      rescue Timeout::Error
-        return false
-      end
-      true
-    end
-
     def boot_sequence
       [
         [CDC::BOOTING, 0x60, 0x06],

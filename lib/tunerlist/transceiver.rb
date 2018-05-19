@@ -157,6 +157,7 @@ module TunerList
     end
 
     def write_data(data)
+      # puts "write_data: #{hex(data)}"
       frame = [Frame::HEADER, frame_sequence, data.length]
       frame += data
       frame += [Frame.compute_checksum(frame)]

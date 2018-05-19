@@ -34,8 +34,7 @@ module TunerList
       end
     end
 
-    def reset
-    end
+    def reset; end
 
     def send(data)
       @tx_datum.push data
