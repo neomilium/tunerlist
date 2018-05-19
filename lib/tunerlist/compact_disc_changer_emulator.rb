@@ -16,7 +16,7 @@ module TunerList
     def initialize(port)
       super(port)
 
-      @cd_number = 0x01
+      @cd_number = 1
       @cd_state = CD::PLAYING
       @random_status = RandomStatus::OFF
       @track_number = 1
@@ -39,6 +39,13 @@ module TunerList
         end
       end
       super()
+    end
+
+    def cd_number=(value)
+      @cd_number = value
+      send tray_status_to_frame
+      send cd_operation_to_frame
+      send status_to_frame
     end
 
     def track_number=(value)
