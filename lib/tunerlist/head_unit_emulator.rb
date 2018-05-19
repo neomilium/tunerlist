@@ -13,21 +13,17 @@ module TunerList
       @cdc = {}
     end
 
-    def run
-      Timeout.timeout(3) do
-        @transceiver.send([HU::HU_ON])
-        @transceiver.send([HU::STOP_PLAY])
-        @transceiver.send([HU::REQ_CD_INFO])
-        @transceiver.send([HU::RANDOM, 0x02, 0x0a])
-        @transceiver.send([HU::START_PLAY])
-      end
-
-      loop do
-        process_data @transceiver.receive
-      end
-    end
-
     private
+
+    def boot_sequence
+      [
+        [HU::HU_ON],
+        [HU::STOP_PLAY],
+        [HU::REQ_CD_INFO],
+        [HU::RANDOM, 0x02, 0x0a],
+        [HU::START_PLAY],
+      ]
+    end
 
     def int_to_bcd(int)
       s = int.to_s

@@ -2,9 +2,49 @@ module TunerList
   class Emulator
     def initialize(port)
       @transceiver = TunerList::Transceiver.new port
+
+      @status = :init
+    end
+
+    def run
+      loop do
+        puts @status
+        @status = case @status
+                  when :init
+                    send_boot_sequence ? :running : :init
+                  when :running
+                    status = :running
+                    begin
+                      Timeout.timeout(2) { process_data @transceiver.receive }
+                    rescue Timeout::Error
+                      status = keep_alive ? :running : :init
+                    end
+                    status
+                  else
+                    raise 'Invalid status'
+                  end
+      end
     end
 
     private
+
+    def send_boot_sequence
+      begin
+        boot_sequence.each do |frame|
+          send_and_wait_ack frame
+        end
+      rescue Timeout::Error
+        puts 'timeout'
+        return false
+      end
+      true
+    end
+
+    def send_and_wait_ack(data)
+      Timeout.timeout(2) do
+        @transceiver.send data
+      end
+    end
 
     def process_data(data)
       payload_type = data.shift
