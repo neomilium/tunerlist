@@ -36,6 +36,7 @@ module TunerList
 
       @status = :init
 
+      @rx_frame_id = 0
       @rx_queue = Queue.new
       @ack_queue = Queue.new
 
@@ -100,7 +101,8 @@ module TunerList
                   process_checksum
                 when :complete
                   ack
-                  @rx_queue << @frame[2..-2]
+                  @rx_queue << @frame[2..-2] unless @frame[1] == @rx_frame_id
+                  @rx_frame_id = @frame[1]
                   :init
                 when :invalid_checksum
                   puts "Checksum is invalid for: #{hex(@frame)}"
