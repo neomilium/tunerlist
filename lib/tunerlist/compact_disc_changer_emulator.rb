@@ -19,7 +19,7 @@ module TunerList
       @cd_number = 0x01
       @cd_state = CD::PLAYING
       @random_status = RandomStatus::OFF
-      @track_number = 0x23
+      @track_number = 1
       @track_time = [0x00, 0x12, 0x34, 0x02]
       @cd_time = [0x01, 0x12, 0x34, 0x02]
 
@@ -42,9 +42,12 @@ module TunerList
     end
 
     def track_number=(value)
-      @track_number = value
-      send cd_operation_to_frame
-      send track_change_to_frame
+      if value != @track_number
+        @track_number = value
+        send playing_to_frame
+        send cd_operation_to_frame
+        send track_change_to_frame
+      end
     end
 
     def cd_state=(value)

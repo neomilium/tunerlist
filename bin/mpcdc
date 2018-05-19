@@ -85,7 +85,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
 
     @mpd_status.on :song do |song|
       puts song
-      @track_number = song.pos + 1
+      self.track_number = song.pos + 1 unless song.nil?
     end
   end
 end
