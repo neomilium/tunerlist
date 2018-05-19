@@ -8,7 +8,8 @@ module TunerList
   class HeadUnitEmulator < Emulator
     def initialize(port)
       super(port)
-      @supported_commands = CDC
+      @receive_commands_from = CDC
+      @send_commands_from = HU
 
       @cdc = {}
     end

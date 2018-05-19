@@ -9,8 +9,9 @@ module TunerList
     def initialize(port)
       super(port)
 
+      @receive_commands_from = HU
+      @send_commands_from = CDC
 
-      @supported_commands = HU
     end
 
 

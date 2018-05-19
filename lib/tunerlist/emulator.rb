@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module TunerList
   class Emulator
     def initialize(port)
@@ -42,6 +44,7 @@ module TunerList
 
     def send_and_wait_ack(data)
       Timeout.timeout(2) do
+        puts "send: #{Helper.const_prettify(@send_commands_from, data[0])}"
         @transceiver.send data
       end
     end
@@ -50,7 +53,7 @@ module TunerList
       payload_type = data.shift
       payload = data[0..-2]
 
-      if (const_name = Helper.find_const_name(@supported_commands, payload_type))
+      if (const_name = Helper.find_const_name(@receive_commands_from, payload_type))
         method_name = "process_#{const_name.downcase}"
         if respond_to? method_name, true
           __send__(method_name, payload)
