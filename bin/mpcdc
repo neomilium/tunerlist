@@ -23,26 +23,29 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
 
   def process_random(payload)
     random = payload[0] == TunerList::RandomStatus::ON
+    process_start_play(nil) if payload[0] == TunerList::RandomStatus::START
     @mpd.random = random
     @random_status = payload[0]
   end
 
   def process_next_track(_payload)
     @mpd.next unless @mpd_state == :stop
+    self.track_number = track_number + 1
   end
 
   def process_prev_track(_payload)
     @mpd.previous unless @mpd_state == :stop
+    self.track_number = track_number - 1
   end
 
   def process_start_play(_payload)
     @mpd.play
-    @cd_state = TunerList::CD::PLAYING
-    send_cd_operation
+    self.cd_state = TunerList::CD::PLAYING
   end
 
   def process_pause(_payload)
     @mpd.pause = true
+    self.cd_state = TunerList::CD::PAUSED
   end
 
   def process_stop_play(_payload)
@@ -51,17 +54,19 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
 
   def process_fast_fwd(_payload)
     @mpd.seek('+20')
-    @cd_state = TunerList::CD::CUEING_FWD
-    send_cd_operation
+    self.cd_state = TunerList::CD::CUEING_FWD
   end
 
   def process_fast_rew(_payload)
     @mpd.seek('-20')
-    @cd_state = TunerList::CD::REWINDING
-    send_cd_operation
+    self.cd_state = TunerList::CD::REWINDING
   end
 
-  def setup_mpd_callbacks
+  def reset
+    @mpd.pause = true
+  end
+
+  def setup_mpd_status_callbacks
     @mpd_status.on :state do |status|
       puts status
 
@@ -77,6 +82,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
     end
 
     @mpd_status.on :song do |song|
+      puts song
       @track_number = song.pos + 1
     end
   end
