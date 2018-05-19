@@ -25,16 +25,6 @@ module TunerList
       ]
     end
 
-    def int_to_bcd(int)
-      s = int.to_s
-      s.insert(0, '0') if s.length.odd?
-      [s].pack('H*').unpack('C*')[0]
-    end
-
-    def bcd_to_int(bcd)
-      format('%02x', bcd).to_i 10
-    end
-
     def send_next_track
       puts 'next track'
       @transceiver.send([HU::NEXT_TRACK, 0x01])
@@ -61,7 +51,7 @@ module TunerList
     end
 
     def process_playing(payload)
-      @cdc[:track_number] = bcd_to_int(payload.shift)
+      @cdc[:track_number] = TunerList.bcd_to_int(payload.shift)
       @cdc[:cd_time] = payload_to_time(payload)
       @cdc[:track_time] = payload_to_time(payload)
       pp @cdc
@@ -69,10 +59,10 @@ module TunerList
 
     def payload_to_time(payload)
       {
-        hour:   bcd_to_int(payload.shift),
-        minute: bcd_to_int(payload.shift),
-        second: bcd_to_int(payload.shift),
-        sector: bcd_to_int(payload.shift),
+        hour:   TunerList.bcd_to_int(payload.shift),
+        minute: TunerList.bcd_to_int(payload.shift),
+        second: TunerList.bcd_to_int(payload.shift),
+        sector: TunerList.bcd_to_int(payload.shift),
       }
     end
   end

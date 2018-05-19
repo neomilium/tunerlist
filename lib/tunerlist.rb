@@ -4,6 +4,17 @@ require 'tunerlist/transceiver'
 require 'tunerlist/emulator'
 
 module TunerList
+  def self.int_to_bcd(int)
+    return 0xff if int > 99
+    s = int.to_s
+    s.insert(0, '0') if s.length.odd?
+    [s].pack('H*').unpack('C*')[0]
+  end
+
+  def self.bcd_to_int(bcd)
+    format('%02x', bcd).to_i 10
+  end
+
   module CDC
     # Payload types
     BOOTING       = 0x11
