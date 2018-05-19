@@ -31,9 +31,7 @@ module TunerList
       @transceiver.send([HU::NEXT_TRACK, 0x01])
     end
 
-    private
-
-    def process_booting(payload)
+    def process_booting(_payload)
       @cdc[:status] = :booting
     end
 

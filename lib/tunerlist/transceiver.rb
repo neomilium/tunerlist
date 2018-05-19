@@ -4,6 +4,7 @@
 require 'serialport'
 
 def hex(data)
+  return nil unless data
   data.map do |b|
     format('%02x', b)
   end
@@ -53,9 +54,7 @@ module TunerList
     end
 
     def send(data)
-      @ack_queue.clear
       @tx_queue.push data
-      puts 'data pushed to queue, waiting ACK…'
       @ack_queue.pop
     end
 
@@ -81,7 +80,7 @@ module TunerList
     end
 
     def process
-      # puts "Transceiver status: #{@status}"
+      # puts "Transceiver status: #{@status}, #{hex(@frame)}"
       @status = case @status
                 when :init
                   @frame = []
@@ -104,7 +103,7 @@ module TunerList
                   @rx_queue << @frame[2..-2]
                   :init
                 when :invalid_checksum
-                  puts 'Checksum is invalid'
+                  puts "Checksum is invalid for: #{hex(@frame)}"
                   :init
                 when :acknowledge then
                   @ack_queue << true
@@ -131,7 +130,10 @@ module TunerList
 
     def process_checksum
       process_bytes(1, :complete, :invalid_checksum) do |bytes|
-        Frame.compute_checksum(@frame) == bytes.first
+        computed = Frame.compute_checksum(@frame)
+        received = bytes.first
+        # puts "received = #{hex([received])}, #{hex([computed])}" unless (computed == received)
+        computed == received
       end
     end
 
