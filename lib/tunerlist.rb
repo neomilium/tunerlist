@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'tunerlist/transceiver'
+require 'tunerlist/emulator'
 
 module TunerList
   module CDC
