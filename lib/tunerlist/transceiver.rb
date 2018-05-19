@@ -77,7 +77,7 @@ module TunerList
     end
 
     def set_timeout(count)
-      @serialport.read_timeout = 100 + count * 10
+      @serialport.read_timeout = 50 + count * 10
     end
 
     def process
