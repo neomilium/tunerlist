@@ -12,10 +12,13 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
   def initialize(port)
     super(port)
 
+    @mpd_status = MPD.new 'localhost', 6600, callbacks: true
+    @mpd_status.connect
+
     @mpd = MPD.new 'localhost', 6600, callbacks: true
     @mpd.connect
 
-    setup_mpd_callbacks
+    setup_mpd_status_callbacks
   end
 
   def process_random(payload)
@@ -59,7 +62,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
   end
 
   def setup_mpd_callbacks
-    @mpd.on :state do |status|
+    @mpd_status.on :state do |status|
       puts status
 
       @mpd_state = status
@@ -73,7 +76,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
       @cd_state = cd_status unless cd_status.nil?
     end
 
-    @mpd.on :song do |song|
+    @mpd_status.on :song do |song|
       @track_number = song.pos + 1
     end
   end
@@ -91,7 +94,7 @@ end
   puts status
 end
 
-@mpd.on :time do |elapsed, total|
+@mpd_status.on :time do |elapsed, total|
   puts "#{elapsed} / #{total}"
   puts "#{pp_seconds(elapsed)} / #{pp_seconds(total)}"
 end
