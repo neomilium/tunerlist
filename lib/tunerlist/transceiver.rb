@@ -31,7 +31,6 @@ module TunerList
                                    stop_bits: 1,
                                    parity: SerialPort::EVEN)
 
-      @serialport.read_timeout = 200
       @serialport.flush_input
 
       @status = :init
@@ -67,6 +66,7 @@ module TunerList
     end
 
     def read(count)
+      set_timeout count
       string = @serialport.read(count)
       return nil if string.nil?
       string.bytes
@@ -74,6 +74,10 @@ module TunerList
 
     def ack
       write [Frame::ACKNOWLEDGE]
+    end
+
+    def set_timeout(count)
+      @serialport.read_timeout = 100 + count * 10
     end
 
     def process
