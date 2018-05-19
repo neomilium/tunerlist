@@ -25,7 +25,20 @@ module TunerList
 
       @receive_commands_from = HU
       @send_commands_from = CDC
+    end
 
+    def run
+      Thread.new do
+        loop do
+          sleep 1
+          if @cd_state == CD::PLAYING
+            send playing_to_frame
+          else
+            send status_to_frame
+          end
+        end
+      end
+      super()
     end
 
     def track_number=(value)
