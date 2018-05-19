@@ -100,9 +100,7 @@ module TunerList
                 when :data
                   process_checksum
                 when :complete
-                  ack
-                  @rx_queue << @frame[2..-2] unless @frame[1] == @rx_frame_id
-                  @rx_frame_id = @frame[1]
+                  process_complete
                   :init
                 when :invalid_checksum
                   puts "Checksum is invalid for: #{hex(@frame)}"
@@ -150,6 +148,12 @@ module TunerList
         return success
       end
       failure
+    end
+
+    def process_complete
+      ack
+      @rx_queue << @frame[2..-2] unless @frame[1] == @rx_frame_id
+      @rx_frame_id = @frame[1]
     end
 
     def frame_sequence
