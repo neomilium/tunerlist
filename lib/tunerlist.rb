@@ -23,6 +23,7 @@ module TunerList
     CD_OPERATION  = 0x21
     RANDOM_STATUS = 0x25
     TRAY_STATUS   = 0x26
+    TRACK_CHANGE  = 0x27
     CD_SUMMARY    = 0x46
     PLAYING       = 0x47
   end
@@ -62,8 +63,9 @@ module TunerList
   end
 
   module RandomStatus
+    START = 0x02
     OFF = 0x03
-    ON  = 0x07
+    ON = 0x07
   end
 
   module Helper
