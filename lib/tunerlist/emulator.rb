@@ -5,41 +5,43 @@ module TunerList
     def initialize(port)
       @transceiver = TunerList::Transceiver.new port
 
-      @status = :init
+      @tx_datum = Queue.new
     end
 
     def run
+      send_boot_sequence
+
+      Thread.new { send_datum }
+
       loop do
-        puts @status
-        @status = case @status
-                  when :init
-                    send_boot_sequence ? :running : :init
-                  when :running
-                    status = :running
-                    begin
-                      Timeout.timeout(2) { process_data @transceiver.receive }
-                    rescue Timeout::Error
-                      status = keep_alive ? :running : :init
-                    end
-                    status
-                  else
-                    raise 'Invalid status'
-                  end
+        process_data @transceiver.receive
       end
     end
 
     private
 
-    def send_boot_sequence
-      begin
-        boot_sequence.each do |frame|
-          send_and_wait_ack frame
+    def send_datum
+      loop do
+        data = @tx_datum.pop
+        begin
+          send_and_wait_ack data
+        rescue Timeout::Error
+          puts "timeout for: #{Helper.const_prettify(@send_commands_from, data[0])}"
+          @tx_datum.clear
+          reset
+          send_boot_sequence
         end
-      rescue Timeout::Error
-        puts 'timeout'
-        return false
       end
-      true
+    end
+
+    def send(data)
+      @tx_datum.push data
+    end
+
+    def send_boot_sequence
+      boot_sequence.each do |data|
+        send data
+      end
     end
 
     def send_and_wait_ack(data)
