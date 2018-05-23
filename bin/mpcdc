@@ -96,16 +96,3 @@ system "/bin/stty -F #{port} parenb -ixon"
 
 cdc = MPCDC.new port
 cdc.run
-
-def seconds_to_hms(sec)
-  [60, 60].reduce([sec]) { |m, o| m.unshift(m.shift.divmod(o)).flatten } unless sec.nil?
-end
-
-@mpd.on :random do |status|
-  puts status
-end
-
-@mpd_status.on :time do |elapsed, total|
-  puts "#{elapsed} / #{total}"
-  puts "#{seconds_to_hms(elapsed)} / #{seconds_to_hms(total)}"
-end
