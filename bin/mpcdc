@@ -91,6 +91,9 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
 end
 
 port = ARGV.shift || 'ttyHU'
+
+system "/bin/stty -F #{port} parenb -ixon"
+
 cdc = MPCDC.new port
 cdc.run
 
