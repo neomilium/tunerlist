@@ -15,7 +15,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
     @mpd_status = MPD.new 'localhost', 6600, callbacks: true
     @mpd_status.connect
 
-    @mpd = MPD.new 'localhost', 6600, callbacks: true
+    @mpd = MPD.new 'localhost', 6600
     @mpd.connect
 
     @mpd.repeat = true
