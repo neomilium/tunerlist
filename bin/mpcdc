@@ -21,7 +21,8 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
     @mpd.repeat = true
 
     setup_mpd_status_callbacks
-    self.cd_number = 7
+    self.cd_number = find_cd_number_from_playlists.to_i
+    puts "Current playlist is CD#{cd_number}"
   end
 
   def process_random(payload)
@@ -67,7 +68,6 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
 
   def find_cd_playlist(id)
     @mpd.playlists.each do |p|
-      puts p.name
       return p if p.name == "CD#{id}"
     end
     nil
@@ -91,7 +91,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
 
   def setup_mpd_status_callbacks
     @mpd_status.on :state do |status|
-      puts status
+      puts "MPD status: #{status}"
 
       @mpd_state = status
       map = {
@@ -100,14 +100,31 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
         pause: TunerList::CD::PAUSED,
       }
       cd_status = map[status]
-      puts cd_status
       self.cd_state = cd_status unless cd_status.nil?
     end
 
     @mpd_status.on :song do |song|
-      puts song
       self.track_number = song.pos + 1 unless song.nil?
     end
+  end
+
+  def find_cd_number_from_playlists
+    @mpd.playlists.each do |p|
+      cd_number = p.name[/CD(\d)/, 1]
+      next if cd_number.nil?
+      return cd_number if playlist_is_current?(p)
+    end
+    7
+  end
+
+  def playlist_is_current?(p)
+    return false unless p.songs.count == @mpd.queue.count
+    queued_songs = @mpd.queue
+    p.songs.each do |s|
+      qs = queued_songs.shift
+      return false unless s.title == qs.title
+    end
+    true
   end
 end
 

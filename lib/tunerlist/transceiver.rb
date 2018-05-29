@@ -44,7 +44,7 @@ module TunerList
       @tx_queue = Queue.new
 
       Thread.abort_on_exception = true
-      #Thread.report_on_exception = true
+      # Thread.report_on_exception = true
       Thread.new do
         loop { process }
       end
