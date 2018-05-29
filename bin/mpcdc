@@ -65,14 +65,21 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
     self.cd_state = TunerList::CD::REWINDING
   end
 
+  def find_cd_playlist(id)
+    @mpd.playlists.each do |p|
+      puts p.name
+      return p if p.name == "CD#{id}"
+    end
+    nil
+  end
+
   def process_load_cd(payload)
-    puts @mpd.playlists
-    playlist = @mpd.playlists[payload[0] - 1]
+    cd = payload[0]
+    playlist = find_cd_playlist(cd)
     unless playlist.nil?
-      puts @mpd.queue.count
       @mpd.clear
-      puts @mpd.queue.count
       playlist.load
+      @mpd.play
       @playlist_id = payload[0]
     end
     self.cd_number = @playlist_id
@@ -89,7 +96,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
       @mpd_state = status
       map = {
         play: TunerList::CD::PLAYING,
-        stop: TunerList::CD::LOADING_TRACK, # FIXME
+        stop: TunerList::CD::LOADING_TRACK,
         pause: TunerList::CD::PAUSED,
       }
       cd_status = map[status]
