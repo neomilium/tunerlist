@@ -66,6 +66,12 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
     self.cd_state = TunerList::CD::REWINDING
   end
 
+  def process_next_cd(_payload)
+    next_cd = cd_number + 1
+    next_cd = 1 if next_cd > 6
+    self.cd_number = next_cd
+  end
+
   def find_cd_playlist(id)
     @mpd.playlists.each do |p|
       return p if p.name == "CD#{id}"
