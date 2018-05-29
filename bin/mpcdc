@@ -21,6 +21,7 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
     @mpd.repeat = true
 
     setup_mpd_status_callbacks
+    self.cd_number = 7
   end
 
   def process_random(payload)
