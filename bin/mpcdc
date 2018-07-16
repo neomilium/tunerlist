@@ -67,9 +67,12 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
   end
 
   def process_next_cd(_payload)
-    next_cd = cd_number + 1
-    next_cd = 1 if next_cd > 6
-    self.cd_number = next_cd
+    next_cd = cd_number
+    6.times do
+      next_cd += 1
+      next_cd = 1 if next_cd > 6
+      break if load_cd_playlist next_cd
+    end
   end
 
   def find_cd_playlist(id)
@@ -80,15 +83,19 @@ class MPCDC < TunerList::CompactDiscChangerEmulator
   end
 
   def process_load_cd(payload)
-    cd = payload[0]
+    load_cd_playlist payload[0]
+  end
+
+  def load_cd_playlist(cd)
     playlist = find_cd_playlist(cd)
     unless playlist.nil?
       @mpd.clear
       playlist.load
       @mpd.play
-      @playlist_id = payload[0]
+      self.cd_number = cd
+      return true
     end
-    self.cd_number = @playlist_id
+    false
   end
 
   def reset
